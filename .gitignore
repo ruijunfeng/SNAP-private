@@ -1,0 +1,10 @@
+__pycache__/
+results/
+datasets/
+*.out
+*.pyc
+*.pth
+*.json
+*.jsonl
+*.png
+*.csv
