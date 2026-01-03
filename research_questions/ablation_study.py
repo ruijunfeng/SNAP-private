@@ -14,31 +14,38 @@ y_true = torch.tensor([item["labels"] for item in data_module.get_profile_datase
 # save the results of different ablation settings
 results = []
 
+# w/o SNAP
+snap_results = load_json("results/calm/version_0/predictions.json")
+y_pred = torch.tensor([int(snap_results[str(i)]["y_proba"] >=0.5) for i in data_module.val_indices])
+y_proba = torch.tensor([snap_results[str(i)]["y_proba"] for i in data_module.val_indices])
+result = calculate_classification_metrics(y_true, y_pred, y_proba)
+results.append(("w/o SNAP", result))
+
 # SNAP w/o numerical embeddings
 snap_results = load_json("results/snap/without_numerical_embedding/version_0/predictions.json")
-y_pred = torch.tensor([int(snap_results[str(i)]["y_proba"] >=0.5) for i in data_module.test_indices])
-y_proba = torch.tensor([snap_results[str(i)]["y_proba"] for i in data_module.test_indices])
+y_pred = torch.tensor([int(snap_results[str(i)]["y_proba"] >=0.5) for i in data_module.val_indices])
+y_proba = torch.tensor([snap_results[str(i)]["y_proba"] for i in data_module.val_indices])
 result = calculate_classification_metrics(y_true, y_pred, y_proba)
 results.append(("SNAP w/o numerical embeddings", result))
 
 # SNAP w/o multi-head self-attention
 snap_results = load_json("results/snap/without_multi_head_self_attn/version_0/predictions.json")
-y_pred = torch.tensor([int(snap_results[str(i)]["y_proba"] >=0.5) for i in data_module.test_indices])
-y_proba = torch.tensor([snap_results[str(i)]["y_proba"] for i in data_module.test_indices])
+y_pred = torch.tensor([int(snap_results[str(i)]["y_proba"] >=0.5) for i in data_module.val_indices])
+y_proba = torch.tensor([snap_results[str(i)]["y_proba"] for i in data_module.val_indices])
 result = calculate_classification_metrics(y_true, y_pred, y_proba)
 results.append(("SNAP w/o multi-head self-attention", result))
 
 # SNAP w/o numerical projecto
 snap_results = load_json("results/snap/without_numerical_projector/version_0/predictions.json")
-y_pred = torch.tensor([int(snap_results[str(i)]["y_proba"] >=0.5) for i in data_module.test_indices])
-y_proba = torch.tensor([snap_results[str(i)]["y_proba"] for i in data_module.test_indices])
+y_pred = torch.tensor([int(snap_results[str(i)]["y_proba"] >=0.5) for i in data_module.val_indices])
+y_proba = torch.tensor([snap_results[str(i)]["y_proba"] for i in data_module.val_indices])
 result = calculate_classification_metrics(y_true, y_pred, y_proba)
 results.append(("SNAP w/o numerical projector", result))
 
 # SNAP
 snap_results = load_json("results/snap/full_model/version_0/predictions.json")
-y_pred = torch.tensor([int(snap_results[str(i)]["y_proba"] >=0.5) for i in data_module.test_indices])
-y_proba = torch.tensor([snap_results[str(i)]["y_proba"] for i in data_module.test_indices])
+y_pred = torch.tensor([int(snap_results[str(i)]["y_proba"] >=0.5) for i in data_module.val_indices])
+y_proba = torch.tensor([snap_results[str(i)]["y_proba"] for i in data_module.val_indices])
 result = calculate_classification_metrics(y_true, y_pred, y_proba)
 results.append(("SNAP", result))
 
