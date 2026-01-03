@@ -1,4 +1,4 @@
-# SNAP: Adapting LLMs for Credit Risk Assessment via Self-Attentive Numerical Alignment and Projection
+# SNAP: Adapting LLMs for Credit Risk Assessment via Self-Attentive Numerical Alignment and Profiling
 ## Scripts
 nohup python methods.machine_learning.model &
 nohup python methods.tabllm.model &
@@ -14,7 +14,6 @@ Evaluate the effectiveness of each components:
 w/o SNAP (pure lora)
 w/o Numerical Embedding (use 23 plain embeddings to replace it)
 w/o Multi-Head Self-Attention (use numerical embedding and numerical projector)
-w/o Numerical Projector (use numerical embedding and multi-head self-attention)
 SNAP
 ### RQ2: performance analysis
 Traditional machien learning models, zero-shot prompting (TabLLM), lora (CALM), and SNAP
