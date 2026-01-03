@@ -48,10 +48,6 @@ if __name__ == "__main__":
         "--use_multi_head_self_attn", action="store_false",
         help="Whether to use multi-head self-attention in the prompt encoder (snap).",
     )
-    parser.add_argument(
-        "--use_numerical_projector", action="store_false",
-        help="Whether to use a numerical projector in the prompt encoder (snap).",
-    )
     
     # Parse the arguments
     args = parser.parse_args()
@@ -102,9 +98,6 @@ if __name__ == "__main__":
         elif not args.use_multi_head_self_attn:
             config.use_multi_head_self_attn = False
             args.experiment_name = "snap/without_multi_head_self_attn"
-        elif not args.use_numerical_projector:
-            config.use_numerical_projector = False
-            args.experiment_name = "snap/without_numerical_projector"
         else:
             args.experiment_name = "snap/full_model"
         config.lora_config = lora_config

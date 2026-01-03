@@ -22,7 +22,6 @@ class SNAP(nn.Module):
         self.prompt_encoder = NumericalPromptEncoder(
             use_numerical_embedding=config.use_numerical_embedding,
             use_multi_head_self_attn=config.use_multi_head_self_attn,
-            use_numerical_projector=config.use_numerical_projector,
             num_features=config.num_features,
             embed_dim=self.word_embeddings.weight.shape[1],
         )

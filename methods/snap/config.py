@@ -11,10 +11,6 @@ class SNAPConfig(CLSConfig):
         default=True,
         metadata={"help": "Whether to use multi-head self-attention in the prompt encoder."}
     )
-    use_numerical_projector: bool = field(
-        default=True,
-        metadata={"help": "Whether to use a numerical projector in the prompt encoder."}
-    )
     num_features: int = field(
         default=23,
         metadata={"help": "The number of features in the dataset used for numerical embeddings."},

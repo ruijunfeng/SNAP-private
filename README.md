@@ -6,7 +6,6 @@ nohup python trainer.py --experiment_name calm &
 nohup python trainer.py --experiment_name snap &
 nohup python trainer.py --experiment_name snap --use_numerical_embedding &
 nohup python trainer.py --experiment_name snap --use_multi_head_self_attn &
-nohup python trainer.py --experiment_name snap --use_numerical_projector &
 ## Evaluation Setups
 Area Under the Curve, Kolmogorov–Smirnov
 ## Research Questions

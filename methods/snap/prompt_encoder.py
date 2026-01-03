@@ -123,15 +123,6 @@ class MultiHeadSelfAttention(nn.Module):
         return attn_output, attn_weights
 
 
-class NumericalProjector(nn.Module):
-    def __init__(self, hidden_dim, embed_dim, projector_bias):
-        super().__init__()
-        self.linear = nn.Linear(hidden_dim, embed_dim, bias=projector_bias)
-    
-    def forward(self, x):
-        return self.linear(x)
-
-
 class NumericalPromptEncoder(nn.Module):
     def __init__(
         self, 
@@ -142,7 +133,6 @@ class NumericalPromptEncoder(nn.Module):
         embed_dim, 
         head_dim=128, 
         attention_bias=False, 
-        projector_bias=False, 
         attention_dropout=0.0, 
     ):
         super().__init__()
@@ -167,15 +157,6 @@ class NumericalPromptEncoder(nn.Module):
             )
         else:
             self.multi_head_self_attention = lambda x: (x, None)
-        # whether to use numerical projector
-        if use_numerical_projector:
-            self.numerical_projector = NumericalProjector(
-                hidden_dim=embed_dim, 
-                embed_dim=embed_dim, 
-                projector_bias=projector_bias,
-            )
-        else:
-            self.numerical_projector = lambda x: x
     
     def forward(self, x):
         # x: [batch_size, num_features]
@@ -185,9 +166,6 @@ class NumericalPromptEncoder(nn.Module):
         
         # 2. Multi-Head Self-Attention
         x, attn_weights = self.multi_head_self_attention(x) # [batch_size, num_features, embed_dim]
-        
-        # 3. Numerical Projector
-        x = self.numerical_projector(x) # [batch_size, num_features, embed_dim]
         
         return x
 
