@@ -31,7 +31,7 @@ class BaseConfig():
 @dataclass
 class CLSConfig(BaseConfig):
     lr: float = field(
-        default=2e-6,
+        default=1e-5,
         metadata={"help": "The learning rate for the optimizer."},
     )
     batch_size: int = field(

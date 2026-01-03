@@ -67,11 +67,13 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(
         config.model_name,
         padding_side="left",
+        local_files_only=True,
     )
     base_model = AutoModelForCausalLM.from_pretrained(
         config.model_name,
         dtype="auto",
         device_map="auto",
+        local_files_only=True,
     )
     # Freeze the base model
     for param in base_model.parameters():
@@ -80,13 +82,14 @@ if __name__ == "__main__":
     # Prepare the LoRA configuration
         lora_config = LoraConfig(
             inference_mode=False,
-            r=16,
+            r=8,
             lora_alpha=32,
             lora_dropout=0.1,
             target_modules="all-linear",
         )
     
     # Initialize the model based on the experiment name
+    torch.manual_seed(42)
     if args.experiment_name == "calm":
         config.lora_config = lora_config
         model = get_peft_model(base_model, lora_config)
