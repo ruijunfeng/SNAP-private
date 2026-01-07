@@ -1,11 +1,10 @@
-# SNAP: Adapting LLMs for Credit Risk Assessment via Self-Attentive Numerical Alignment and Profiling
+# SNAP: Adapting LLMs for Credit Risk Assessment via Self-Attentive Numerical Alignment & Profiling
 ## Scripts
-nohup python methods.machine_learning.model &
 nohup python methods.tabllm.model &
-nohup python trainer.py --experiment_name calm &
-nohup python trainer.py --experiment_name snap &
-nohup python trainer.py --experiment_name snap --use_numerical_embedding &
-nohup python trainer.py --experiment_name snap --use_multi_head_self_attn &
+CUDA_VISIBLE_DEVICES=0 nohup python trainer.py --experiment_name calm &
+CUDA_VISIBLE_DEVICES=1 nohup python trainer.py --experiment_name snap &
+CUDA_VISIBLE_DEVICES=2 nohup python trainer.py --experiment_name snap --use_numerical_embedding &
+CUDA_VISIBLE_DEVICES=3 nohup python trainer.py --experiment_name snap --use_multi_head_self_attn &
 ## Evaluation Setups
 Area Under the Curve, Kolmogorov–Smirnov
 ## Research Questions
@@ -13,7 +12,7 @@ Area Under the Curve, Kolmogorov–Smirnov
 Evaluate the effectiveness of each components:
 w/o SNAP (pure lora)
 w/o Numerical Embedding (use 23 plain embeddings to replace it)
-w/o Multi-Head Self-Attention (use numerical embedding and numerical projector)
+w/o Multi-Head Self-Attention (use numerical embedding and lora)
 SNAP
 ### RQ2: performance analysis
 Traditional machien learning models, zero-shot prompting (TabLLM), lora (CALM), and SNAP
