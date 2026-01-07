@@ -18,10 +18,10 @@ class NumericalEmbedding(nn.Module):
             groups=num_features,
         )
         
-        # 2. Layer Normalization
+        # 2. Normalization
         # The key is to do Norm over the embedding dimension
         # Ensuring that the embedding vectors for each feature have controlled magnitude, independent of batch distribution
-        self.layernorm = nn.LayerNorm(embed_dim)
+        self.normalization = nn.LayerNorm(embed_dim)
     
     def forward(self, x):
         # x: [batch_size, num_features]
@@ -32,17 +32,17 @@ class NumericalEmbedding(nn.Module):
         # Ensuring the model can handle wide-ranging numerical values without instability
         # Even the input is 100 million, after log it's about 20, which neural networks can handle
         x = torch.sign(x) * torch.log1p(torch.abs(x))
-                
+        
         # --- Step 2: Numerical Embedding ---
         x = x.unsqueeze(-1) # [batch, num_features] -> [batch, num_features, 1]
         x = self.numerical_embedding(x) # -> [batch, num_features * embed_dim, 1]
         x = x.view(-1, self.num_features, self.embed_dim) # -> [batch, num_features, embed_dim]
         
-        # --- Step 3: Layer Normalization ---
+        # --- Step 3: Normalization ---
         # Treat is as batch * num_features of embed_dim vectors to normalize individually
         # This ensures the normalization is per-feature embedding, not across features
         # Even batch size is 1, it still works correctly
-        x = self.layernorm(x)
+        x = self.normalization(x)
         
         return x
 
@@ -126,9 +126,8 @@ class MultiHeadSelfAttention(nn.Module):
 class NumericalPromptEncoder(nn.Module):
     def __init__(
         self, 
-        use_numerical_embedding,
-        use_multi_head_self_attn,
-        use_numerical_projector,
+        use_numerical_embedding, 
+        use_multi_head_self_attn, 
         num_features, 
         embed_dim, 
         head_dim=128, 
