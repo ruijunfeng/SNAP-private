@@ -54,9 +54,9 @@ Here is a example of good credit user profile:
 - The percentage of trades that currently carry a balance is 56%.
 """
 
-# https://proceedings.mlr.press/v206/hegselmann23a.html
+# https://www.sciencedirect.com/science/article/pii/S2666827024000100
 @dataclass
-class TabLLMConfig(BaseConfig):
+class InformedGPTConfig(BaseConfig):
     use_examples: bool = field(
         default=False,
         metadata={"help": "Whether to include examples in the prompt."},

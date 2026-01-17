@@ -7,16 +7,16 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 from utils.json_utils import update_json
 
-from methods.tabllm.config import TabLLMConfig
+from methods.informed_gpt.config import InformedGPTConfig
 from data_module import HelocDataModule
 
 # prepare the data module
-config = TabLLMConfig()
+config = InformedGPTConfig()
 data_module = HelocDataModule()
 dataset = data_module.get_profile_dataset(data_module.val_indices + data_module.test_indices)
 
 # create the output directory
-output_dir = "results/tabllm"
+output_dir = "results/informed_gpt"
 os.makedirs(output_dir, exist_ok=True)
 
 # load the tokenizer and the model
