@@ -26,12 +26,12 @@ for name in model_names:
     result = calculate_classification_metrics(y_true, y_pred, y_proba)
     results.append((name, result))
 
-# TabLLM (Zero-Shot Prompting)
-tabllm_results = load_json("results/tabllm/predictions.json")
-y_pred = torch.tensor([tabllm_results[str(i)]["y_pred"] for i in data_module.test_indices])
-y_proba = torch.tensor([tabllm_results[str(i)]["y_proba"] for i in data_module.test_indices])
+# Informed GPT (Zero-Shot Prompting)
+informed_gpt_results = load_json("results/informed_gpt/predictions.json")
+y_pred = torch.tensor([informed_gpt_results[str(i)]["y_pred"] for i in data_module.test_indices])
+y_proba = torch.tensor([informed_gpt_results[str(i)]["y_proba"] for i in data_module.test_indices])
 result = calculate_classification_metrics(y_true, y_pred, y_proba)
-results.append(("TabLLM", result))
+results.append(("Informed GPT", result))
 
 # CALM (LoRA)
 lora_results = load_json("results/calm/version_0/predictions.json")
