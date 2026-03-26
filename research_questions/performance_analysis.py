@@ -16,7 +16,7 @@ results = []
 
 # Machine Learning Models
 model_names = [
-    "KNN", "MLP", "LogisticRegression", "SVM", "NaiveBayes", "DecisionTree", 
+    "LogisticRegression", "KNN", "MLP", "SVM", "NaiveBayes", "DecisionTree", 
     "RandomForest", "GradientBoosting", "XGBoost", "LightGBM",
 ]
 for name in model_names:

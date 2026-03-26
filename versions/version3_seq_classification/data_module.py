@@ -14,7 +14,7 @@ from transformers import AutoTokenizer, DataCollatorWithPadding
 from trl.trainer.sft_trainer import DataCollatorForLanguageModeling
 
 from utils.meta_utils import load_metadata
-from utils.profile_utils import generate_profile
+from utils.serialize_utils import generate_profile
 from utils.json_utils import load_json, save_json
 
 

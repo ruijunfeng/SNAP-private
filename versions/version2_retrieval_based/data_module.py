@@ -10,7 +10,7 @@ from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer, AutoModel
 
 from utils.meta_utils import load_metadata
-from utils.profile_utils import generate_profile
+from utils.serialize_utils import generate_profile
 from utils.json_utils import load_json, save_json
 from utils.emb_utils import get_profile_embeddings, get_ranked_indices
 
