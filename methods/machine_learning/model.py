@@ -24,17 +24,17 @@ X_test, y_test = data_module.get_feature_dataset(data_module.test_indices)
 # Models
 models = {
     # Basic Models
+    "LR": LogisticRegression(random_state=42),
     "KNN": KNeighborsClassifier(),
     "MLP": MLPClassifier(hidden_layer_sizes=(64, 32), random_state=42),
-    "LogisticRegression": LogisticRegression(random_state=42),
     "SVM": SVC(probability=True, random_state=42),
-    "NaiveBayes": GaussianNB(),
-    "DecisionTree": DecisionTreeClassifier(random_state=42),
+    "NB": GaussianNB(),
+    "DT": DecisionTreeClassifier(random_state=42),
     # Ensemble Methods (Bagging and Boosting)
-    "RandomForest": RandomForestClassifier(random_state=42),
-    "GradientBoosting": GradientBoostingClassifier(random_state=42),
-    "XGBoost": XGBClassifier(random_state=42, verbosity=-1),
-    "LightGBM": LGBMClassifier(random_state=42, verbosity=-1),
+    "RF": RandomForestClassifier(random_state=42),
+    "GBDT": GradientBoostingClassifier(random_state=42),
+    "XGBoost": XGBClassifier(random_state=42),
+    "LightGBM": LGBMClassifier(random_state=42),
 }
 
 # Train and evaluate each model
