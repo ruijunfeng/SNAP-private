@@ -1,4 +1,4 @@
-# SNAP: Adapting LLMs for Credit Scoring via Self-Attentive Numerical Alignment & Profiling
+# SNAP: Adapting LLMs for Credit Scoring via Self-Attentive Numerical Awareness & Profiling
 ## Scripts
 nohup python methods.tabllm.model &
 CUDA_VISIBLE_DEVICES=0 nohup python trainer.py --experiment_name calm &
@@ -6,7 +6,7 @@ CUDA_VISIBLE_DEVICES=1 nohup python trainer.py --experiment_name snap &
 CUDA_VISIBLE_DEVICES=2 nohup python trainer.py --experiment_name snap --use_numerical_embedding &
 CUDA_VISIBLE_DEVICES=3 nohup python trainer.py --experiment_name snap --use_numerical_profiling &
 ## Evaluation Setups
-Area Under the Curve, Kolmogorov–Smirnov
+Area Under the Receiver Operating Characteristic Curve, Gini Coefficient, Kolmogorov–Smirnov, Precision-Recall Area Under Curve
 ## Research Questions
 ### RQ1: ablation study
 Evaluate the effectiveness of each components:
@@ -16,7 +16,9 @@ w/o Numerical Profiling (use numerical embedding and lora)
 SNAP
 ### RQ2: performance analysis
 Traditional machien learning models, zero-shot prompting (Informed GPT), lora (CALM), and SNAP
-### RQ3: feature robustness
+### RQ3: visualization analysis
+Visualize the ROC curves and decile analysis.
+### RQ4: feature robustness (optional)
 Delete feature columns under different proportion and see the performance changes (25%, 50%, 75%)
 ## Title Alternatives
 Breaking Numerical Blindness: Intra-Numerical Prompt Tuning for Credit Risk Assessment
