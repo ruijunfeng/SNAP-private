@@ -17,6 +17,7 @@ from methods.snap.model import SNAP
 
 from data_module import HelocDataModule
 from module import SFTModule
+from callback import ResultCheckpoint
 
 # set the precision for matmul
 torch.set_float32_matmul_precision("high")
@@ -54,7 +55,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     # Load the configuration based on the experiment name
-
     config = CONFIG_MAPPINGS[args.experiment_name]()
     
     # Prepare the data module
@@ -143,7 +143,8 @@ if __name__ == "__main__":
     
     # Initialize the trainer
     save_dir = "results"
-    checkpoint_callback = ModelCheckpoint(
+    result_checkpoint = ResultCheckpoint()
+    model_checkpoint = ModelCheckpoint(
         filename="model-{epoch:02d}-{total_loss:.3f}", # name of the save_top_k model
         monitor="total_loss", # metric to monitor
         mode="min", # minimize the metric
@@ -160,7 +161,7 @@ if __name__ == "__main__":
         devices=1, # disable DDP
         max_epochs=config.max_epochs,
         logger=logger,
-        callbacks=[TQDMProgressBar(refresh_rate=1), checkpoint_callback],
+        callbacks=[TQDMProgressBar(refresh_rate=1), model_checkpoint, result_checkpoint],
         enable_model_summary=False,
         log_every_n_steps=1,
         num_sanity_val_steps=0,
@@ -173,7 +174,7 @@ if __name__ == "__main__":
     )
     
     # Load the best model for evaluation
-    checkpoint = torch.load(checkpoint_callback.best_model_path, weights_only=False)
+    checkpoint = torch.load(model_checkpoint.best_model_path, weights_only=False)
     module.on_load_checkpoint(checkpoint)
     module.model.eval()
     
@@ -183,13 +184,10 @@ if __name__ == "__main__":
         accelerator="auto",
         devices=1, # disable DDP
         logger=False, # no logger for testing
+        callbacks=[result_checkpoint], # save predictions for testing
         enable_checkpointing=False, # no checkpointing for testing
     )
     trainer.test(
         model=module,
-        dataloaders=val_dataloader,
-    )
-    trainer.test(
-        model=module,
-        dataloaders=test_dataloader,
+        dataloaders=[val_dataloader, test_dataloader],
     )

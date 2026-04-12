@@ -65,7 +65,7 @@ class SFTModule(LightningModule):
         # Logging (during evaluation, normally save by epoch rather than step)
         self.log("total_loss_val", outputs["loss"], prog_bar=True, on_step=False, on_epoch=True, batch_size=1)
     
-    def test_step(self, batch, batch_idx):
+    def test_step(self, batch, batch_idx, dataloader_idx=0):
         # Forward pass (batch size is 1 during testing for stability)
         outputs = self.forward(
             input_ids=batch["input_ids"],
@@ -73,23 +73,18 @@ class SFTModule(LightningModule):
             numeric_features=batch["numeric_features"],
         )
         
-        # constrained decoding on choice_ids
+        # Constrained decoding on choice_ids
         logits = outputs.logits[0, -1, self.choice_ids].squeeze() # shape: (num_choices,)
         y_proba = torch.softmax(logits, dim=0)[1].item() # probability of "Bad"
         y_pred = int(y_proba >= 0.5) #torch.argmax(logits).item()
         
         # Save predictions
-        update_json(f"{self.log_dir}/predictions.json", batch["indices"][0], {"y_pred": y_pred, "y_proba": y_proba, "logits": logits.tolist()})
-    
-    def on_test_end(self):
-        # Visualize the TensorBoard logs
-        if not os.path.exists(f"{self.log_dir}/pictures.png"):
-            for filename in os.listdir(self.log_dir):
-                if filename.startswith("events.out.tfevents"):
-                    parse_events_and_save_plot(
-                        event_file_path=f"{self.log_dir}/{filename}",
-                        output_image_path=f"{self.log_dir}/pictures.png",
-                    )
+        return {
+            "index": batch["indices"][0],
+            "y_pred": y_pred,
+            "y_proba": y_proba,
+            "logits": logits.tolist(),
+        }
     
     def configure_optimizers(self):
         # Set the log directory for saving predictions
