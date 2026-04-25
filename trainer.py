@@ -35,10 +35,7 @@ if __name__ == "__main__":
     
     parser.add_argument(
         "--experiment_name", type=str,
-        choices=[
-            "calm",
-            "snap",
-        ],
+        choices=list(CONFIG_MAPPINGS.keys()),
         default="snap",
         help="The experiment to run.",
     )
@@ -63,7 +60,7 @@ if __name__ == "__main__":
     # Load the tokenizer and the model
     tokenizer = AutoTokenizer.from_pretrained(
         config.model_name,
-        padding_side="left",
+        padding_side="left", # left padding for causal language modeling
         local_files_only=True,
     )
     base_model = AutoModelForCausalLM.from_pretrained(

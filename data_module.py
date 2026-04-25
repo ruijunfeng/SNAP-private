@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import DataLoader
 from datasets import Dataset
-from transformers import AutoTokenizer, DataCollatorWithPadding
+from transformers import AutoTokenizer
 from trl.trainer.sft_trainer import DataCollatorForLanguageModeling
 
 from utils.meta_utils import load_metadata
@@ -150,7 +150,7 @@ class HelocDataModule:
             if not max_length is None:
                 if len(input_ids) > max_length:
                     input_ids = input_ids[:max_length]
-                    labels = labels[:max_length]
+                    labels = labels[:max_length] # no need to shift, when feed to hugging face CausalLM, it will automatically shift the labels by one to the right internally
             
             # 5. Create attention mask
             attention_mask = [1] * len(input_ids)
@@ -163,23 +163,20 @@ class HelocDataModule:
                 "indices": example["indices"],
             }
         
-        def collate_fn(features):
+        def collate_fn(batch):
             """Separate indices and numeric features from data collator
             """
-            indices = [f["indices"] for f in features]
-            numeric_features = [f["numeric_features"] for f in features]
-            # Remove from dict so collator doesn't complain
-            for f in features:
-                f.pop("indices")
-                f.pop("numeric_features")
-            # Use the data collator to get input_ids and labels
-            batch = data_collator(features)
+            # Collator cannot process things irrelevant to tokenization, so we need to pop them out before collating and put them back after collating
+            indices = [item.pop("indices") for item in batch]
+            numeric_features = [item.pop("numeric_features") for item in batch]
+            # Collate input_ids, attention_mask, and labels with dynamic padding
+            batch = data_collator(batch)
             # Add back indices and numeric features
             batch["indices"] = indices
             batch["numeric_features"] = torch.tensor(numeric_features, dtype=torch.float32)
             return batch
         
-        # create a dataset
+        # Create a dataset
         numeric_features = []
         prompts = []
         completions = []
@@ -204,19 +201,21 @@ class HelocDataModule:
         dataset = Dataset.from_dict({"indices": indices, "numeric_features": numeric_features, "prompt": prompts, "completion": completions})
         dataset = dataset.map(
             tokenize_fn,
-            fn_kwargs={"tokenizer": tokenizer, "max_length": None},
-            batched=False, # make tokenize_fn to process sample by sample
+            fn_kwargs={"tokenizer": tokenizer, "max_length": None}, # pass addtional arguments to the tokenize_fn
+            batched=False, # make tokenize_fn to process sample by sample due to complex tokenization logic
             remove_columns=["prompt", "completion"],
         )
         
-        # create a collator for dynamic padding 
+        # Setup data_collator for dynamic padding under language modeling in Completion-Only Format (default setting is pad to the longest sequence in the batch, not pad to max_length)
         data_collator = DataCollatorForLanguageModeling(
             pad_token_id=tokenizer.pad_token_id,
             completion_only_loss=True,
             padding_free=False,
+            pad_to_multiple_of=None,
+            return_tensors="pt",
         )
         
-        # create a dataloader
+        # Generate DataLoader with the built dataset and collate_fn
         dataloader = DataLoader(
             dataset,
             batch_size=batch_size,
