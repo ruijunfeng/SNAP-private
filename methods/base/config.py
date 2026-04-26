@@ -46,3 +46,7 @@ class CLSConfig(BaseConfig):
         default="linear",
         metadata={"help": "The learning rate scheduler to use."},
     )
+    lora_config: dataclass = field(
+        default=None,
+        metadata={"help": "The configuration for LoRA fine-tuning."},
+    )
