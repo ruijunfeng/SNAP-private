@@ -192,8 +192,8 @@ class HelocDataModule:
             )
             completions.append(
                 [
-                    {
-                        "content": f"{answer_template}{self.df.iloc[index]['RiskPerformance']}",
+                    {# self.df.iloc[index]["RiskPerformance"] is already text format, so no mapping is needed
+                        "content": answer_template.format(label=self.df.iloc[index]["RiskPerformance"]),
                         "role": "assistant",
                     },
                 ]

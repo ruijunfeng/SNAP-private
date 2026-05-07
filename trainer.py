@@ -74,18 +74,18 @@ if __name__ == "__main__":
         param.requires_grad = False
     
     # Prepare the LoRA configuration
-        lora_config = LoraConfig(
-            inference_mode=False,
-            r=8,
-            lora_alpha=16,
-            lora_dropout=0.05,
-            target_modules="all-linear",
-        )
-    
+    lora_config = LoraConfig(
+        inference_mode=False,
+        r=8,
+        lora_alpha=16,
+        lora_dropout=0.05,
+        target_modules="all-linear",
+    )
+    config.lora_config = lora_config
+
     # Initialize the model based on the experiment name
     torch.manual_seed(42)
     if args.experiment_name == "calm":
-        config.lora_config = lora_config
         model = get_peft_model(base_model, lora_config)
     elif args.experiment_name == "snap":
         # Customize SNAP specific configurations for ablation study
@@ -100,7 +100,6 @@ if __name__ == "__main__":
             args.experiment_name = "snap/full_model"
         
         # Set up the model
-        config.lora_config = lora_config
         base_model = get_peft_model(base_model, lora_config)
         model = SNAP(
             config=config, 

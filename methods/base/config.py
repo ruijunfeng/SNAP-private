@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from peft import LoraConfig
 
 question_template = """You are an expert credit risk assessment model.
 Your task is to determine whether this user should be classified as good credit or bad credit.
@@ -11,7 +12,8 @@ Given the following user features:
 Is this user's credit good or bad?
 """
 
-answer_template = "The user credit is likely to be:\n"
+answer_template = """The user credit is likely to be:
+{label}"""
 
 @dataclass
 class BaseConfig():
@@ -46,7 +48,7 @@ class CLSConfig(BaseConfig):
         default="linear",
         metadata={"help": "The learning rate scheduler to use."},
     )
-    lora_config: dataclass = field(
+    lora_config: LoraConfig = field(
         default=None,
         metadata={"help": "The configuration for LoRA fine-tuning."},
     )
