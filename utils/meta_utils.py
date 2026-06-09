@@ -30,7 +30,12 @@ def load_data_dictionary(path: str) -> Dict[str, Dict[str, Any]]:
         
         description = ""
         if pd.notna(row["Description"]):
-            description = str(row["Description"]).strip()
+            description = str(row["Description"]).strip().strip('.')
+            
+            # Clean out "See tab..." instructions from the description
+            if "See tab" in description:
+                # Split at "See tab", take the first half, and strip trailing spaces/periods
+                description = description.split("See tab")[0].strip(' .')
         
         monotonicity = ""
         if pd.notna(row[mono_col]):
@@ -47,7 +52,6 @@ def load_data_dictionary(path: str) -> Dict[str, Dict[str, Any]]:
         }
     
     return data_dict
-
 
 def _parse_max_delq_block(df: pd.DataFrame, variable_name: str) -> Dict[int, str]:
     """
@@ -209,7 +213,7 @@ def load_metadata(
 
 
 if __name__ == "__main__":
-    excel_path = "dataset/heloc/raw/heloc_data_dictionary-2.xlsx"
+    excel_path = "datasets/heloc/raw/heloc_data_dictionary-2.xlsx"
     
     data_dict, max_delq_dict, special_vals = load_metadata(excel_path)
     
@@ -219,7 +223,8 @@ if __name__ == "__main__":
     
     print("\nMax Delq mappings:")
     for var, mapping in max_delq_dict.items():
-        print(var, "->", mapping)
+        for code, meaning in mapping.items():
+            print(var, "->", {code: meaning})
     
     print("\nSpecial values mapping:")
     print(special_vals)
