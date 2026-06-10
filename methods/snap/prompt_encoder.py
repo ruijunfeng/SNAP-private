@@ -2,29 +2,31 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class NumericalEmbedding(nn.Module):
-    def __init__(self, num_features, embed_dim):
+    def __init__(self, num_features, hidden_dim):
         super().__init__()
         self.num_features = num_features
-        self.embed_dim = embed_dim
+        self.hidden_dim = hidden_dim
         
         # Use Conv1d with groups=num_features to achieve per-feature linear projection
         # Equivalent to having separate Linear layers for each feature, but more efficient
-        # Like input with shape [batch, num_features, 1], it got groups * [1, embed_dim] of non-shared weight matrix
+        # Like input with shape [batch, num_features, 1], it got groups * [1, hidden_dim] of non-shared weight matrix
         self.scalar_projection = nn.Conv1d(
             in_channels=num_features,
-            out_channels=num_features * embed_dim,
+            out_channels=num_features * hidden_dim,
             kernel_size=1,
             groups=num_features,
+            dtype=torch.bfloat16,
         )
-        
-        # Use a linear layer for feature projection
-        self.feature_projection = nn.Linear(embed_dim, embed_dim)
         
         # Normalization
         # The key is to do Norm over the embedding dimension
         # Ensuring that the embedding vectors for each feature have controlled magnitude, independent of batch distribution
-        self.normalization = nn.LayerNorm(embed_dim)
+        self.normalization = nn.LayerNorm(hidden_dim, dtype=torch.bfloat16)
+        
+        # Use a linear layer for feature projection
+        self.feature_projection = nn.Linear(hidden_dim, hidden_dim, dtype=torch.bfloat16)
     
     def forward(self, x):
         # x: [batch_size, num_features]
@@ -38,11 +40,11 @@ class NumericalEmbedding(nn.Module):
         
         # --- Step 2: Scalar Projection ---
         x = x.unsqueeze(-1) # [batch, num_features] -> [batch, num_features, 1]
-        x = self.scalar_projection(x) # -> [batch, num_features * embed_dim, 1]
-        x = x.view(-1, self.num_features, self.embed_dim) # -> [batch, num_features, embed_dim]
+        x = self.scalar_projection(x) # -> [batch, num_features * hidden_dim, 1]
+        x = x.view(-1, self.num_features, self.hidden_dim) # -> [batch, num_features, hidden_dim]
         
         # --- Step 3: Normalization ---
-        # Treat is as batch * num_features of embed_dim vectors to normalize individually
+        # Treat is as batch * num_features of hidden_dim vectors to normalize individually
         # This ensures the normalization is per-feature embedding, not across features
         # Even batch size is 1, it still works correctly
         x = self.normalization(x)
@@ -54,13 +56,15 @@ class NumericalEmbedding(nn.Module):
 
 
 class PromptEmbeddings(nn.Module):
-    def __init__(self, num_features, embed_dim):
+    def __init__(self, num_features, hidden_dim):
         super().__init__()
-        self.prompt_embeddings = nn.Embedding(num_features, embed_dim).weight
+        self.prompt_embeddings = nn.Embedding(num_features, hidden_dim, dtype=torch.bfloat16)
     
     def forward(self, x):
         # Expand based on batch size
-        return self.prompt_embeddings.expand(x.shape[0], -1, -1)
+        batch_size, num_features = x.shape
+        feature_indices = torch.arange(num_features, device=x.device).unsqueeze(0).repeat(batch_size, 1)
+        return self.prompt_embeddings(feature_indices)
 
 
 class MultiHeadSelfAttention(nn.Module):
@@ -80,17 +84,19 @@ class MultiHeadSelfAttention(nn.Module):
         
         # Learnable projections for Q, K, V
         self.q_proj = nn.Linear(
-            hidden_dim, self.num_attention_heads * self.head_dim, bias=attention_bias,
+            hidden_dim, self.num_attention_heads * self.head_dim, bias=attention_bias, dtype=torch.bfloat16,
         )
         self.k_proj = nn.Linear(
-            hidden_dim, self.num_attention_heads * self.head_dim, bias=attention_bias,
+            hidden_dim, self.num_attention_heads * self.head_dim, bias=attention_bias, dtype=torch.bfloat16,
         )
         self.v_proj = nn.Linear(
-            hidden_dim, self.num_attention_heads * self.head_dim, bias=attention_bias,
+            hidden_dim, self.num_attention_heads * self.head_dim, bias=attention_bias, dtype=torch.bfloat16,
         )
-        
+        self.o_proj = nn.Linear(
+            hidden_dim, hidden_dim, bias=False, dtype=torch.bfloat16,
+        )
         self.dropout = nn.Dropout(attention_dropout)
-
+    
     def forward(self, hidden_states):
         batch_size, num_features, _ = hidden_states.shape
         
@@ -126,51 +132,141 @@ class MultiHeadSelfAttention(nn.Module):
         attn_output = attn_output.transpose(1, 2).contiguous()
         attn_output = attn_output.view(batch_size, num_features, -1)
         
-        return attn_output, attn_weights
+        # --- Step 6: Final Linear Projection ---
+        attn_output = self.o_proj(attn_output)
+        
+        return attn_output
+
+
+class TransformerBlock(nn.Module):
+    def __init__(self, hidden_dim, head_dim, mlp_ratio=2, mlp_dropout=0.0, attention_bias=False, attention_dropout=0.0):
+        """
+        Args:
+            hidden_dim (int): The dimension of the input and output hidden states.
+            head_dim (int): The dimension of each attention head.
+            mlp_ratio (float): The expansion ratio for the Feed-Forward Network. 
+                               Standard is 4.0 (e.g., 768 -> 3072 -> 768).
+            mlp_dropout (float): Dropout probability for the FFN and residual connections.
+            attention_bias (boolen): Whether to use bias term for projection.
+            attention_dropout (float): Dropout probability within the attention mechanism.
+        """
+        super().__init__()
+        
+        # --- 1. Self-Attention Sublayer ---
+        # LayerNorm applied after the attention mechanism
+        self.norm1 = nn.LayerNorm(hidden_dim, dtype=torch.bfloat16)
+        # Using your provided MultiHeadSelfAttention class
+        self.attn = MultiHeadSelfAttention(
+            hidden_dim=hidden_dim, 
+            head_dim=head_dim, 
+            attention_bias=attention_bias, 
+            attention_dropout=attention_dropout, 
+        )
+        
+        # --- 2. Feed-Forward Network (FFN / MLP) Sublayer ---
+        # LayerNorm applied after the FFN
+        self.norm2 = nn.LayerNorm(hidden_dim, dtype=torch.bfloat16)
+        
+        # The FFN typically expands the dimensionality, applies a non-linearity, 
+        # and then projects it back to the original hidden_dim.
+        mlp_hidden_dim = hidden_dim * mlp_ratio
+        self.mlp = nn.Sequential(
+            nn.Linear(hidden_dim, mlp_hidden_dim, dtype=torch.bfloat16),
+            nn.GELU(),               # Gaussian Error Linear Unit
+            nn.Dropout(mlp_dropout), # Dropout after activation
+            nn.Linear(mlp_hidden_dim, hidden_dim, dtype=torch.bfloat16),
+            nn.Dropout(mlp_dropout)  # Dropout before the residual connection
+        )
+    
+    def forward(self, x):
+        """
+        Args:
+            x (torch.Tensor): Input tensor of shape (batch_size, sequence_length, hidden_dim)
+            
+        Returns:
+            torch.Tensor: Output tensor of shape (batch_size, sequence_length, hidden_dim)
+        """
+        
+        # --- Step 1: Attention block with Post-Norm and Residual Connection ---
+        # Equation: x = LayerNorm(x + Attention(x))
+        # The input 'x' bypasses the attention via the residual connection (+)
+        attn_out = self.attn(x)
+        x = x + attn_out
+        x = self.norm1(x)
+        
+        # --- Step 2: FFN block with Post-Norm and Residual Connection ---
+        # Equation: x = LayerNorm(x + FFN(x))
+        # The output from Step 1 bypasses the MLP via the second residual connection (+)
+        mlp_out = self.mlp(x)
+        x = x + mlp_out
+        x = self.norm2(x)
+        return x
 
 
 class NumericalPromptEncoder(nn.Module):
     def __init__(
         self, 
         use_numerical_embedding, 
-        use_multi_head_self_attn, 
+        use_numerical_profiling, 
+        use_projector,
         num_features, 
         embed_dim, 
-        head_dim=128, 
-        attention_bias=False, 
-        attention_dropout=0.0, 
+        hidden_dim, 
+        head_dim, 
+        mlp_ratio, 
+        mlp_dropout, 
+        attention_bias, 
+        attention_dropout, 
+        num_layers, 
+        projector_ratio, 
     ):
         super().__init__()
         # whether to use numerical embeddings
         if use_numerical_embedding:
             self.numerical_embedding = NumericalEmbedding(
                 num_features=num_features, 
-                embed_dim=embed_dim,
+                hidden_dim=hidden_dim, # use a smaller embedding dimension for numerical features to save parameters and Postvent overfitting
             )
         else:
             self.numerical_embedding = PromptEmbeddings(
                 num_features=num_features,
-                embed_dim=embed_dim,
+                hidden_dim=hidden_dim,
             )
         # whether to use multi-head self-attention for numerical profiling
-        if use_multi_head_self_attn:
-            self.numerical_profiling = MultiHeadSelfAttention(
-                hidden_dim=embed_dim,
-                head_dim=head_dim,
-                attention_bias=attention_bias,
-                attention_dropout=attention_dropout,
+        if use_numerical_profiling:
+            self.numerical_profiling = nn.Sequential(
+                *[TransformerBlock(
+                    hidden_dim=hidden_dim, 
+                    head_dim=head_dim, 
+                    mlp_ratio=mlp_ratio, 
+                    mlp_dropout=mlp_dropout, 
+                    attention_bias=attention_bias, 
+                    attention_dropout=attention_dropout, 
+                ) for _ in range(num_layers)] # stack multiple blockes for deeper profiling
             )
         else:
-            self.numerical_profiling = lambda x: (x, None)
+            self.numerical_profiling = nn.Identity()
+        # whether to use projector
+        if use_projector:
+            self.projector = nn.Sequential(
+                nn.Linear(hidden_dim, embed_dim*projector_ratio, dtype=torch.bfloat16), 
+                nn.GELU(),
+                nn.Linear(embed_dim*projector_ratio, embed_dim, dtype=torch.bfloat16),
+            ) # project to the same dimension as word embeddings for seamless integration
+        else:
+            self.projector = nn.Identity()
     
     def forward(self, x):
         # x: [batch_size, num_features]
         
         # 1. Numerical Embedding
-        x = self.numerical_embedding(x) # [batch_size, num_features, embed_dim]
+        x = self.numerical_embedding(x) # [batch_size, num_features, hidden_dim]
         
         # 2. Numerical Profiling
-        x, attn_weights = self.numerical_profiling(x) # [batch_size, num_features, embed_dim]
+        x = self.numerical_profiling(x) # [batch_size, num_features, hidden_dim]
+        
+        # 3. Final Projection
+        x = self.projector(x) # [batch_size, num_features, embed_dim]
         
         return x
 
