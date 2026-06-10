@@ -63,15 +63,15 @@ class SFTModule(LightningModule):
     def test_step(self, batch, batch_idx, dataloader_idx=0):
         # Forward pass (batch size is 1 during testing for stability)
         outputs = self.forward(
-            input_ids=batch["input_ids"],
-            attention_mask=batch["attention_mask"],
+            input_ids=batch["prompts"],
+            attention_mask=batch["prompt_attention_mask"],
             numeric_features=batch["numeric_features"],
         )
         
         # Constrained decoding on choice_ids
         logits = outputs.logits[0, -1, self.choice_ids].squeeze() # shape: (num_choices,)
         y_proba = torch.softmax(logits, dim=0)[1].item() # probability of "Bad"
-        y_pred = int(y_proba >= 0.5) #torch.argmax(logits).item()
+        y_pred = int(y_proba >= 0.5) # torch.argmax(logits).item()
         
         # Save predictions
         return {
@@ -85,10 +85,15 @@ class SFTModule(LightningModule):
         # Set the log directory for saving predictions
         self.log_dir = self.trainer.log_dir
         # Optimizer settings
-        optimizer = torch.optim.AdamW([p for p in self.model.parameters() if p.requires_grad], lr=self.hparams.config.lr)
+        optimizer = torch.optim.Adam([p for p in self.model.parameters() if p.requires_grad], lr=self.hparams.config.lr)
         # Learning rate scheduler settings
+        num_training_steps = self.hparams.num_training_samples * self.trainer.max_epochs // self.hparams.config.batch_size // self.trainer.accumulate_grad_batches
+        num_warmup_steps = 0
         lr_scheduler = get_scheduler(
-            name=self.hparams.config.scheduler_name, optimizer=optimizer, num_warmup_steps=0, num_training_steps=self.hparams.num_training_samples * self.trainer.max_epochs,
+            name=self.hparams.config.scheduler_name, 
+            optimizer=optimizer, 
+            num_warmup_steps=num_warmup_steps, 
+            num_training_steps=num_training_steps,
         )
         return [optimizer], [lr_scheduler]
     
