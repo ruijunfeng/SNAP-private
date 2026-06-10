@@ -1,19 +1,20 @@
 from dataclasses import dataclass, field
 from peft import LoraConfig
 
-question_template = """You are an expert credit risk assessment model.
-Your task is to determine whether this user should be classified as good credit or bad credit.
-A good credit means the user is likely to repay reliably.
-A bad credit means the user is high-risk and likely to default.
+question_template = """You are an expert in credit scoring.
+Your task is to analyze an applicant's historical financial and credit information and classify the applicant as either "Good" or "Bad".
 
-Given the following user features:
+Definitions:
+- "Good": The applicant is low-risk and is likely to repay debt reliably.
+- "Bad": The applicant is high-risk and is likely to default.
+
+Given the following applicant credit history:
 {profile}
 
-Is this user's credit good or bad?
+Is this applicant's credit Good or Bad?
 """
 
-answer_template = """The user credit is likely to be:
-{label}"""
+answer_template = """The applicant's credit classification is:\n"""
 
 @dataclass
 class BaseConfig():
@@ -33,15 +34,19 @@ class BaseConfig():
 @dataclass
 class CLSConfig(BaseConfig):
     lr: float = field(
-        default=1e-5,
+        default=2e-4,
         metadata={"help": "The learning rate for the optimizer."},
     )
     batch_size: int = field(
-        default=4,
+        default=3,
         metadata={"help": "The batch size for training."},
     )
+    accumulate_grad_batches: int = field(
+        default=32,
+        metadata={"help": "The number of batches to accumulate gradients over."},
+    )
     max_epochs: int = field(
-        default=1,
+        default=10,
         metadata={"help": "The number of training epochs."},
     )
     scheduler_name: str = field(
