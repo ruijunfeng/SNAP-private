@@ -1,10 +1,11 @@
 import os
+
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
-from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.neural_network import MLPClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
@@ -12,11 +13,12 @@ from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
 
 from utils.json_utils import save_json
-
 from data_module import HelocDataModule
 
 # Load the dataset
 data_module = HelocDataModule()
+
+# Get the feature datasets
 X_train, y_train = data_module.get_feature_dataset(data_module.train_indices)
 X_val, y_val = data_module.get_feature_dataset(data_module.val_indices)
 X_test, y_test = data_module.get_feature_dataset(data_module.test_indices)
@@ -24,17 +26,16 @@ X_test, y_test = data_module.get_feature_dataset(data_module.test_indices)
 # Models
 models = {
     # Basic Models
-    "LR": LogisticRegression(random_state=42),
     "KNN": KNeighborsClassifier(),
-    "MLP": MLPClassifier(hidden_layer_sizes=(64, 32), random_state=42),
+    "MLP": MLPClassifier(hidden_layer_sizes=(64,64), random_state=42),
     "SVM": SVC(probability=True, random_state=42),
-    "NB": GaussianNB(),
+    "NB": MultinomialNB(),
     "DT": DecisionTreeClassifier(random_state=42),
     # Ensemble Methods (Bagging and Boosting)
     "RF": RandomForestClassifier(random_state=42),
     "GBDT": GradientBoostingClassifier(random_state=42),
-    "XGBoost": XGBClassifier(random_state=42),
-    "LightGBM": LGBMClassifier(random_state=42),
+    "XGBoost": XGBClassifier(random_state=42, n_estimators=100, max_depth=3,),
+    "LightGBM": LGBMClassifier(random_state=42, n_estimators=100, max_depth=3,),
 }
 
 # Train and evaluate each model
@@ -45,8 +46,8 @@ for name, model in models.items():
     # For tree-based models, scaling is not strictly necessary 
     # But using Pipeline for consistency and easier management
     clf = Pipeline([
-        ("scale", StandardScaler()),
-        ("model", model)
+        ("scaler", MinMaxScaler()),
+        ("model", model),
     ])
     clf.fit(X_train, y_train)
     
@@ -75,3 +76,5 @@ for name, model in models.items():
     output_dir = f"results/machine_learning/{name}"
     os.makedirs(output_dir, exist_ok=True)
     save_json(f"{output_dir}/predictions.json", model_results)
+
+print("Testing finished.")
