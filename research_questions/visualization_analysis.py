@@ -25,7 +25,6 @@ STYLE_MAP = {
     "GBDT": {"color": "#117a65", "marker": "o"},   # Deep Teal, Circle
     "RF": {"color": "#8e44ad", "marker": "*"},       # Deep Purple, Star
     "SVM": {"color": "#2c3e50", "marker": "h"},                # Dark Navy Blue, Hexagon
-    "LR": {"color": "#34495e", "marker": "X"}, # Charcoal, X
     "MLP": {"color": "#f39c12", "marker": "<"},                # Golden Rod, Triangle Left
     "KNN": {"color": "#7f8c8d", "marker": ">"},                # Slate Grey, Triangle Right
     "NB": {"color": "#95a5a6", "marker": "d"},         # Medium Grey, Thin Diamond
@@ -213,7 +212,7 @@ def decile_binning_visualization(model_probas: dict, y_true: np.ndarray, output_
         grid_axis="y"
     )
     
-    ax.set_ylim([-0.05, 1.1])
+    ax.set_ylim([-0.05, 1.05])
     ax.set_xticks(x)
     
     save_fig(fig, output_dir, "decile_binning", "decile_binning")
@@ -255,7 +254,7 @@ if __name__ == "__main__":
     
     # Machine Learning Models
     model_names = [
-        "LR", "KNN", "MLP", "SVM", "NB", "DT", 
+        "KNN", "MLP", "SVM", "NB", "DT", 
         "RF", "GBDT", "XGBoost", "LightGBM",
     ]
     for name in model_names:
