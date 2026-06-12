@@ -22,7 +22,7 @@ class HelocDataModule:
     def __init__(
         self,
     ):
-        self.label_map = {"Good": 0, "Bad": 1}
+        self.label_to_index = {"Good": 0, "Bad": 1}
         
         # Paths
         excel_path = "datasets/heloc/raw/heloc_data_dictionary-2.xlsx"
@@ -85,22 +85,76 @@ class HelocDataModule:
         indices: List,
     ):
         X = self.df.iloc[indices].drop(columns=["RiskPerformance", "ApplicantProfile"]).values
-        y = self.df.iloc[indices]["RiskPerformance"].map(self.label_map).values
+        y = self.df.iloc[indices]["RiskPerformance"].map(self.label_to_index).values
         return X, y
     
     def get_profile_dataset(
         self,
         indices: list,
     ):
-        dataset = []
+        """Prepares a Dataset object in the format of profiles and labels for the given indices.
+        
+        Args:
+            indices (List): List of indices to select from the dataset.
+        
+        Returns:
+            dataset (Dataset): A Dataset object with the selected indices, numeric features, profiles, and labels.
+        """
+        dataset = {
+            "indices": [],
+            "numeric_features": [],
+            "profiles": [],
+            "labels": [],
+        }
         for index in indices:
-            dataset.append({
-                "indices": index,
-                "numeric_features": self.df.iloc[index].drop(labels=["RiskPerformance", "ApplicantProfile"]).values,
-                "profiles": self.df.iloc[index]["ApplicantProfile"],
-                "labels": self.label_map[self.df.iloc[index]["RiskPerformance"]],
-            })
-        return dataset
+            dataset["indices"].append(str(index)) # used for result logging and loading, this needs to be a string.
+            dataset["numeric_features"].append(self.df.iloc[index].drop(labels=["RiskPerformance", "ApplicantProfile"]).values.astype(int).tolist())
+            dataset["profiles"].append(self.df.iloc[index]["ApplicantProfile"])
+            dataset["labels"].append(self.label_to_index[self.df.iloc[index]["RiskPerformance"]])
+        return Dataset.from_dict(dataset)
+    
+    def get_chat_dataset(
+        self,
+        indices: List,
+        question_template: str=None,
+        answer_template: str=None,
+    ):
+        """Prepares a Dataset object in the format of prompts and completions for the given indices.
+        
+        Args:
+            indices (List): List of indices to select from the dataset.
+            question_template (str): The template for the question prompt. Defaults to None.
+            answer_template (str): The template for the answer prompt. Defaults to None.
+        
+        Returns:
+            dataset (Dataset): A Dataset object with the selected indices, numeric features, prompts, and completions.
+        """
+        dataset = {
+            "indices": [],
+            "numeric_features": [],
+            "prompts": [],
+            "completions": [],
+        }
+        for index in indices:
+            dataset["indices"].append(str(index)) # used for result logging and loading, this needs to be a string.
+            dataset["numeric_features"].append(self.df.iloc[index].drop(labels=["RiskPerformance", "ApplicantProfile"]).values.astype(int).tolist())
+            dataset["prompts"].append(
+                [
+                    {
+                        "content": question_template.format(profile=self.df.iloc[index]["ApplicantProfile"]),
+                        "role": "user",
+                    },
+                ]
+            )
+            dataset["completions"].append(
+                [
+                    {
+                        "content": f"{answer_template}{self.df.iloc[index]['RiskPerformance']}",
+                        "role": "assistant",
+                    },
+                ]
+            )
+        return Dataset.from_dict(dataset)
     
     def get_dataloader(
         self,
@@ -183,7 +237,7 @@ class HelocDataModule:
             indices = [item.pop("indices") for item in batch]
             numeric_features = [item.pop("numeric_features") for item in batch]
             # Process prompts and prompt_attention_mask with DataCollatorWithPadding
-            prompts = data_collator_padding([{"input_ids": item.pop("prompts"), "attention_mask": item.pop("prompt_attention_mask")} for item in batch])
+            prompts = data_collator_pad([{"input_ids": item.pop("prompts"), "attention_mask": item.pop("prompt_attention_mask")} for item in batch])
             # Process input_ids, attention_mask, and labels with DataCollatorForLanguageModeling as labels needs to be padded with -100
             completions = data_collator_lm(batch)
             # Reassemble the batch
@@ -198,28 +252,11 @@ class HelocDataModule:
             return batch
         
         # Create a dataset
-        numeric_features = []
-        prompts = []
-        completions = []
-        for index in indices:
-            numeric_features.append(self.df.iloc[index].drop(labels=["RiskPerformance", "ApplicantProfile"]).values.astype(int).tolist())
-            prompts.append(
-                [
-                    {
-                        "content": question_template.format(profile=self.df.iloc[index]["ApplicantProfile"]),
-                        "role": "user",
-                    },
-                ]
-            )
-            completions.append(
-                [
-                    {
-                        "content": f"{answer_template}{self.df.iloc[index]["RiskPerformance"]}",
-                        "role": "assistant",
-                    },
-                ]
-            )
-        dataset = Dataset.from_dict({"indices": indices, "numeric_features": numeric_features, "prompts": prompts, "completions": completions})
+        dataset = self.get_chat_dataset(
+            indices=indices, 
+            question_template=question_template, 
+            answer_template=answer_template,
+        )
         dataset = dataset.map(
             tokenize_fn,
             fn_kwargs={"tokenizer": tokenizer, "max_length": None}, # pass addtional arguments to the tokenize_fn
@@ -254,7 +291,7 @@ class HelocDataModule:
         # ---------------------------------------------------
         # In our case, because we need to concat prefix and get next-token logits during inference.
         # For simplicity, we use a batch size of 1 during testing, though batching is also supported.
-        data_collator_padding = DataCollatorWithPadding(
+        data_collator_pad = DataCollatorWithPadding(
             tokenizer=tokenizer, 
             padding="longest"
         )
@@ -354,28 +391,11 @@ class HelocDataModule:
             return batch
         
         # Create a dataset
-        numeric_features = []
-        prompts = []
-        completions = []
-        for index in indices:
-            numeric_features.append(self.df.iloc[index].drop(labels=["RiskPerformance", "ApplicantProfile"]).values.astype(int).tolist())
-            prompts.append(
-                [
-                    {
-                        "content": question_template.format(profile=self.df.iloc[index]["ApplicantProfile"]),
-                        "role": "user",
-                    },
-                ]
-            )
-            completions.append(
-                [
-                    {
-                        "content": f"{answer_template}{self.df.iloc[index]["RiskPerformance"]}",
-                        "role": "assistant",
-                    },
-                ]
-            )
-        dataset = Dataset.from_dict({"indices": indices, "numeric_features": numeric_features, "prompts": prompts, "completions": completions})
+        dataset = self.get_chat_dataset(
+            indices=indices, 
+            question_template=question_template, 
+            answer_template=answer_template,
+        )
         dataset = dataset.map(
             tokenize_fn,
             fn_kwargs={"tokenizer": tokenizer, "max_length": None}, # pass addtional arguments to the tokenize_fn
@@ -469,28 +489,11 @@ class HelocDataModule:
             return batch
         
         # Create a dataset
-        numeric_features = []
-        prompts = []
-        completions = []
-        for index in indices:
-            numeric_features.append(self.df.iloc[index].drop(labels=["RiskPerformance", "ApplicantProfile"]).values.astype(int).tolist())
-            prompts.append(
-                [
-                    {
-                        "content": question_template.format(profile=self.df.iloc[index]["ApplicantProfile"]),
-                        "role": "user",
-                    },
-                ]
-            )
-            completions.append(
-                [
-                    {
-                        "content": f"{answer_template}{self.df.iloc[index]["RiskPerformance"]}",
-                        "role": "assistant",
-                    },
-                ]
-            )
-        dataset = Dataset.from_dict({"indices": indices, "numeric_features": numeric_features, "prompts": prompts, "completions": completions})
+        dataset = self.get_chat_dataset(
+            indices=indices, 
+            question_template=question_template, 
+            answer_template=answer_template,
+        )
         dataset = dataset.map(
             tokenize_fn,
             fn_kwargs={"tokenizer": tokenizer, "max_length": None}, # pass addtional arguments to the tokenize_fn
