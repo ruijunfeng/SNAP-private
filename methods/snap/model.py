@@ -4,11 +4,13 @@ import torch
 from torch import nn
 
 from methods.snap.prompt_encoder import NumericalPromptEncoder
+
+
 class SNAP(nn.Module):
     """
     Similar to PeftModelForCausalLM, this class is a wrapper for SNAP.
     The difference is that the prompt encoder here takes a numerical features as input.
-
+    
     Args:
         config: The configuration of the prompt encoder.
         base_model: The base model to be used.

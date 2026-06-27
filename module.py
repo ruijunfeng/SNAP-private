@@ -69,15 +69,15 @@ class SFTModule(LightningModule):
         )
         
         # Constrained decoding on choice_ids
-        logits = outputs.logits[0, -1, self.choice_ids].squeeze() # shape: (num_choices,)
-        y_proba = torch.softmax(logits, dim=0)[1].item() # probability of "Bad"
-        y_pred = int(y_proba >= 0.5) # torch.argmax(logits).item()
+        logits = outputs.logits[:, -1, self.choice_ids].squeeze(-1) # get next token logits, shape: (batch_size, 2)
+        y_proba = torch.softmax(logits, dim=-1)[:, 1] # probability of "Bad", shape: (batch_size,)
+        y_pred = (y_proba >= 0.5).int() # use threshold instead of torch.argmax(logits).item()
         
         # Save predictions
         return {
-            "index": batch["indices"][0],
-            "y_pred": y_pred,
-            "y_proba": y_proba,
+            "indices": batch["indices"],
+            "y_pred": y_pred.tolist(),
+            "y_proba": y_proba.tolist(),
             "logits": logits.tolist(),
         }
     

@@ -38,8 +38,12 @@ class ResultCheckpoint(Callback):
         self.predictions = {}
     
     def on_test_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx=0):
-        index = outputs.pop("index")
-        self.predictions[index] = outputs
+        for i, index in enumerate(outputs["indices"]):
+            self.predictions[index] = {
+                "y_pred": outputs["y_pred"][i],
+                "y_proba": outputs["y_proba"][i],
+                "logits": outputs["logits"][i]
+            }
     
     def on_test_end(self, trainer, pl_module):
         save_json(f"{self.log_dir}/predictions.json", self.predictions)
