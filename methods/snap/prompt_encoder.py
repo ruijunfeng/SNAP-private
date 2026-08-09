@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,17 +9,21 @@ class NumericalEmbedding(nn.Module):
         super().__init__()
         self.num_features = num_features
         self.hidden_dim = hidden_dim
+        half_dim = hidden_dim // 2
         
         # Use Conv1d with groups=num_features to achieve per-feature linear projection
         # Equivalent to having separate Linear layers for each feature, but more efficient
         # Like input with shape [batch, num_features, 1], it got groups * [1, hidden_dim] of non-shared weight matrix
         self.scalar_projection = nn.Conv1d(
             in_channels=num_features,
-            out_channels=num_features * hidden_dim,
+            out_channels=num_features * half_dim, # Changed to half_dim to accommodate sin/cos concat
             kernel_size=1,
             groups=num_features,
             dtype=torch.bfloat16,
         )
+        nn.init.normal_(self.scalar_projection.weight, std=1.2)
+        if self.scalar_projection.bias is not None:
+            nn.init.uniform_(self.scalar_projection.bias, 0, 2*math.pi)
         
         # Normalization
         # The key is to do Norm over the embedding dimension
@@ -40,8 +45,10 @@ class NumericalEmbedding(nn.Module):
         
         # --- Step 2: Scalar Projection ---
         x = x.unsqueeze(-1) # [batch, num_features] -> [batch, num_features, 1]
-        x = self.scalar_projection(x) # -> [batch, num_features * hidden_dim, 1]
-        x = x.view(-1, self.num_features, self.hidden_dim) # -> [batch, num_features, hidden_dim]
+        freq = self.scalar_projection(x) # -> [batch, num_features * half_dim, 1]
+        freq = freq.view(-1, self.num_features, self.hidden_dim // 2) # -> [batch, num_features, half_dim]
+        # Concatenate sine and cosine to form the full hidden_dim
+        x = torch.stack([torch.sin(freq), torch.cos(freq)], dim=-1).flatten(start_dim=-2) # -> [batch, num_features, hidden_dim]
         
         # --- Step 3: Normalization ---
         # Treat is as batch * num_features of hidden_dim vectors to normalize individually
@@ -118,7 +125,7 @@ class MultiHeadSelfAttention(nn.Module):
         # attn_weights: (B, H, N, N) describing attention scores between all feature pairs
         attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) * self.scaling
         # Softmax normalization
-        attn_weights = F.softmax(attn_weights, dim=-1)
+        attn_weights = F.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
         # Attention dropout
         attn_weights = self.dropout(attn_weights)
         
@@ -139,14 +146,14 @@ class MultiHeadSelfAttention(nn.Module):
 
 
 class TransformerBlock(nn.Module):
-    def __init__(self, hidden_dim, head_dim, mlp_ratio=2, mlp_dropout=0.0, attention_bias=False, attention_dropout=0.0):
+    def __init__(self, hidden_dim, head_dim, ffn_ratio=2, ffn_dropout=0.0, attention_bias=False, attention_dropout=0.0):
         """
         Args:
             hidden_dim (int): The dimension of the input and output hidden states.
             head_dim (int): The dimension of each attention head.
-            mlp_ratio (float): The expansion ratio for the Feed-Forward Network. 
+            ffn_ratio (float): The expansion ratio for the Feed-Forward Network. 
                                Standard is 4.0 (e.g., 768 -> 3072 -> 768).
-            mlp_dropout (float): Dropout probability for the FFN and residual connections.
+            ffn_dropout (float): Dropout probability for the FFN and residual connections.
             attention_bias (boolen): Whether to use bias term for projection.
             attention_dropout (float): Dropout probability within the attention mechanism.
         """
@@ -163,19 +170,19 @@ class TransformerBlock(nn.Module):
             attention_dropout=attention_dropout, 
         )
         
-        # --- 2. Feed-Forward Network (FFN / MLP) Sublayer ---
+        # --- 2. Feed-Forward Network Sublayer ---
         # LayerNorm applied after the FFN
         self.norm2 = nn.LayerNorm(hidden_dim, dtype=torch.bfloat16)
         
         # The FFN typically expands the dimensionality, applies a non-linearity, 
         # and then projects it back to the original hidden_dim.
-        mlp_hidden_dim = hidden_dim * mlp_ratio
-        self.mlp = nn.Sequential(
-            nn.Linear(hidden_dim, mlp_hidden_dim, dtype=torch.bfloat16),
-            nn.GELU(),               # Gaussian Error Linear Unit
-            nn.Dropout(mlp_dropout), # Dropout after activation
-            nn.Linear(mlp_hidden_dim, hidden_dim, dtype=torch.bfloat16),
-            nn.Dropout(mlp_dropout)  # Dropout before the residual connection
+        ffn_hidden_dim = hidden_dim * ffn_ratio
+        self.ffn = nn.Sequential(
+            nn.Linear(hidden_dim, ffn_hidden_dim, dtype=torch.bfloat16),
+            nn.GELU(),
+            nn.Dropout(ffn_dropout), # Dropout after activation
+            nn.Linear(ffn_hidden_dim, hidden_dim, dtype=torch.bfloat16),
+            nn.Dropout(ffn_dropout)  # Dropout before the residual connection
         )
     
     def forward(self, x):
@@ -196,9 +203,9 @@ class TransformerBlock(nn.Module):
         
         # --- Step 2: FFN block with Post-Norm and Residual Connection ---
         # Equation: x = LayerNorm(x + FFN(x))
-        # The output from Step 1 bypasses the MLP via the second residual connection (+)
-        mlp_out = self.mlp(x)
-        x = x + mlp_out
+        # The output from Step 1 bypasses the FFN via the second residual connection (+)
+        ffn_out = self.ffn(x)
+        x = x + ffn_out
         x = self.norm2(x)
         return x
 
@@ -213,8 +220,8 @@ class NumericalPromptEncoder(nn.Module):
         embed_dim, 
         hidden_dim, 
         head_dim, 
-        mlp_ratio, 
-        mlp_dropout, 
+        ffn_ratio, 
+        ffn_dropout, 
         attention_bias, 
         attention_dropout, 
         num_layers, 
@@ -238,8 +245,8 @@ class NumericalPromptEncoder(nn.Module):
                 *[TransformerBlock(
                     hidden_dim=hidden_dim, 
                     head_dim=head_dim, 
-                    mlp_ratio=mlp_ratio, 
-                    mlp_dropout=mlp_dropout, 
+                    ffn_ratio=ffn_ratio, 
+                    ffn_dropout=ffn_dropout, 
                     attention_bias=attention_bias, 
                     attention_dropout=attention_dropout, 
                 ) for _ in range(num_layers)] # stack multiple blockes for deeper profiling
