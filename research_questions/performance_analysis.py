@@ -33,16 +33,16 @@ y_proba = torch.tensor([informed_gpt_results[str(i)]["y_proba"] for i in data_mo
 result = calculate_classification_metrics(y_true, y_pred, y_proba)
 results.append(("Informed GPT", result))
 
-# CALM (LoRA) 4 6 8 15 16 20 21
+# CALM (LoRA)
 lora_results = load_json("results/calm/version_0/predictions.json")
-y_pred = torch.tensor([int(lora_results[str(i)]["y_proba"] >=0.5) for i in data_module.test_indices])
+y_pred = torch.tensor([int(lora_results[str(i)]["y_proba"]>=0.5) for i in data_module.test_indices])
 y_proba = torch.tensor([lora_results[str(i)]["y_proba"] for i in data_module.test_indices])
 result = calculate_classification_metrics(y_true, y_pred, y_proba)
 results.append(("CALM", result))
 
-# SNAP 2 3 7 10 11 16 20 21 19
+# SNAP
 snap_results = load_json("results/snap/full_model/version_0/predictions.json")
-y_pred = torch.tensor([int(snap_results[str(i)]["y_proba"] >=0.5) for i in data_module.test_indices])
+y_pred = torch.tensor([int(snap_results[str(i)]["y_proba"]>=0.5) for i in data_module.test_indices])
 y_proba = torch.tensor([snap_results[str(i)]["y_proba"] for i in data_module.test_indices])
 result = calculate_classification_metrics(y_true, y_pred, y_proba)
 results.append(("SNAP", result))
