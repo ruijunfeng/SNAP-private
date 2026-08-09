@@ -80,14 +80,14 @@ if __name__ == "__main__":
     # Prepare the LoRA configuration
     lora_config = LoraConfig(
         inference_mode=False,
-        r=8,
-        lora_alpha=16,
+        r=32,
+        lora_alpha=64,
         lora_dropout=0.1,
         target_modules="all-linear",
     )
     
     # Initialize the model based on the experiment name
-    torch.manual_seed(42)
+    torch.manual_seed(233)
     if args.experiment_name == "calm":
         config.lora_config = lora_config
         model = get_peft_model(base_model, lora_config)
@@ -170,7 +170,7 @@ if __name__ == "__main__":
         tokenizer=tokenizer,
         question_template=config.question_template,
         answer_template=config.answer_template,
-        batch_size=1,
+        batch_size=config.batch_size,
     )
     trainer.fit(
         model=module,

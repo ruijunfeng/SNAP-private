@@ -85,7 +85,7 @@ class SFTModule(LightningModule):
         # Set the log directory for saving predictions
         self.log_dir = self.trainer.log_dir
         # Optimizer settings
-        optimizer = torch.optim.Adam([p for p in self.model.parameters() if p.requires_grad], lr=self.hparams.config.lr)
+        optimizer = torch.optim.Adam([p for p in self.model.parameters() if p.requires_grad], lr=self.hparams.config.lr, weight_decay=0.001)
         # Learning rate scheduler settings
         num_training_steps = self.hparams.num_training_samples * self.trainer.max_epochs // self.hparams.config.batch_size // self.trainer.accumulate_grad_batches
         num_warmup_steps = 0
