@@ -1,13 +1,14 @@
 # SNAP: Adapting LLMs for Credit Scoring via Self-Attentive Numerical Awareness & Profiling
 ## Scripts
-CUDA_VISIBLE_DEVICES=0 nohup python -m methods.machine_learning.model &
-CUDA_VISIBLE_DEVICES=0 nohup python -m methods.informed_gpt.model &
-CUDA_VISIBLE_DEVICES=0 nohup python trainer.py --experiment_name calm &
-CUDA_VISIBLE_DEVICES=0 nohup python trainer.py --experiment_name snap &
-CUDA_VISIBLE_DEVICES=0 nohup python trainer.py --experiment_name snap --disable_numerical_embedding &
-CUDA_VISIBLE_DEVICES=0 nohup python trainer.py --experiment_name snap --disable_numerical_profiling &
-CUDA_VISIBLE_DEVICES=0 nohup python trainer.py --experiment_name snap --disable_projector &
-
+```bash
+CUDA_VISIBLE_DEVICES=5 nohup python -m methods.machine_learning.model &
+CUDA_VISIBLE_DEVICES=5 nohup python -m methods.informed_gpt.model &
+CUDA_VISIBLE_DEVICES=5 nohup python trainer.py --experiment_name calm &
+CUDA_VISIBLE_DEVICES=5 nohup python trainer.py --experiment_name snap &
+CUDA_VISIBLE_DEVICES=5 nohup python trainer.py --experiment_name snap --disable_numerical_embedding &
+CUDA_VISIBLE_DEVICES=5 nohup python trainer.py --experiment_name snap --disable_numerical_profiling &
+CUDA_VISIBLE_DEVICES=5 nohup python trainer.py --experiment_name snap --disable_projector &
+```
 ## Evaluation Setups
 Area Under the Receiver Operating Characteristic Curve, Gini Coefficient, Kolmogorov–Smirnov, Precision-Recall Area Under Curve
 ## Research Questions
