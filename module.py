@@ -28,7 +28,7 @@ class SFTModule(LightningModule):
         self.model = model
         self.choice_ids = tokenizer(["Good", "Bad"], add_special_tokens=False).input_ids
         
-        # Enable manual optimization
+        # Enable automatic optimization
         self.automatic_optimization = True
     
     def forward(self, *args, **kwargs):
@@ -95,7 +95,14 @@ class SFTModule(LightningModule):
             num_warmup_steps=num_warmup_steps, 
             num_training_steps=num_training_steps,
         )
-        return [optimizer], [lr_scheduler]
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": lr_scheduler,
+                "interval": "step",
+                "frequency": 1,
+            },
+        }
     
     def on_save_checkpoint(self, checkpoint):
         # Get the default state_dict

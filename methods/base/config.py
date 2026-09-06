@@ -50,7 +50,7 @@ class CLSConfig(BaseConfig):
         metadata={"help": "The number of training epochs."},
     )
     scheduler_name: str = field(
-        default="linear",
+        default="constant",
         metadata={"help": "The learning rate scheduler to use."},
     )
     lora_config: LoraConfig = field(

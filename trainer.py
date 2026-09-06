@@ -138,7 +138,7 @@ if __name__ == "__main__":
         monitor="total_loss_val", # metric to monitor
         mode="min", # minimize the metric
         save_top_k=1, # save the top k models with filename.ckpt
-        save_last=True, # save the last model with last.ckpt
+        save_last=False, # save the last model with last.ckpt
     )
     logger = TensorBoardLogger(
         save_dir=save_dir, # directory to save logs
