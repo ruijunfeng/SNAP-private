@@ -25,12 +25,8 @@ def calculate_classification_metrics(
     gini = 2 * roc_auc - 1
     result = {
         "ROC-AUC": roc_auc,
-        "Gini": gini,
         "KS": ks,
         "PR-AUC": pr_auc,
-        "Accuracy": acc,
-        "Precision_weighted": report["weighted avg"]["precision"],
-        "Recall_weighted": report["weighted avg"]["recall"],
         "F1_weighted": report["weighted avg"]["f1-score"],
     }
     
