@@ -2,6 +2,9 @@ from typing import Optional
 
 import torch
 from torch import nn
+import torch.nn.functional as F
+
+from transformers.utils import ModelOutput
 
 from methods.snap.prompt_encoder import NumericalPromptEncoder
 
@@ -34,6 +37,46 @@ class SNAP(nn.Module):
             attention_dropout=config.attention_dropout,
             num_layers=config.num_layers,
             projector_ratio=config.projector_ratio,
+        )
+        # whether to use language model
+        if not self.config.use_language_model:
+            self.prompt_encoder = NumericalPromptEncoder(
+                use_numerical_embedding=config.use_numerical_embedding,
+                use_numerical_profiling=config.use_numerical_profiling,
+                use_projector=config.use_projector,
+                num_features=config.num_features,
+                embed_dim=2,
+                head_dim=config.head_dim,
+                ffn_ratio=config.ffn_ratio,
+                ffn_dropout=config.ffn_dropout,
+                hidden_dim=config.hidden_dim,
+                attention_bias=config.attention_bias,
+                attention_dropout=config.attention_dropout,
+                num_layers=config.num_layers,
+                projector_ratio=config.projector_ratio*2,
+            )
+            self.forward = self.forward_no_lm
+            del self.base_model
+            del self.word_embeddings
+    
+    def forward_no_lm(
+        self,
+        numeric_features: torch.Tensor = None,
+        labels: Optional[torch.Tensor] = None,
+        **kwargs,
+    ):
+        # Generate soft prompts from the prompt encoder
+        x = self.prompt_encoder(numeric_features) # [batch_size, num_features, 2]
+        logits = x[:, -1, :] # [batch_size, 2]
+        
+        # Compute loss if labels are provided
+        loss = None
+        if labels is not None:
+            loss = F.cross_entropy(logits, labels.reshape(-1))
+        
+        return ModelOutput(
+            loss=loss,
+            logits=logits,
         )
     
     def forward(

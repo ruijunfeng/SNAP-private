@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
-from methods.base.config import CLSConfig
+from methods.base.config import LanguageModelTrainingConfig
+
 
 @dataclass
-class SNAPConfig(CLSConfig):
+class SNAPConfig(LanguageModelTrainingConfig):
     num_features: int = field(
         default=23,
         metadata={"help": "The number of features in the dataset used for numerical embeddings."},
@@ -50,4 +51,8 @@ class SNAPConfig(CLSConfig):
     use_projector: bool = field(
         default=True,
         metadata={"help": "Whether to use projector in the prompt encoder."}
+    )
+    use_language_model: bool = field(
+        default=True,
+        metadata={"help": "Whether to use language model."}
     )
