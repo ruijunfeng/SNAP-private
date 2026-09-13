@@ -3,7 +3,6 @@ import os
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.linear_model import LogisticRegression
 from sklearn.svm import SVC
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.neural_network import MLPClassifier
@@ -13,10 +12,10 @@ from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
 
 from utils.json_utils import save_json
-from data_module import HelocDataModule
+from data_module import HELOCDataModule, PAKDDDataModule, HMEQDataModule, GMSCDataModule
 
 # Load the dataset
-data_module = HelocDataModule()
+data_module = HELOCDataModule()
 
 # Get the feature datasets
 X_train, y_train = data_module.get_feature_dataset(data_module.train_indices)
@@ -28,14 +27,14 @@ models = {
     # Basic Models
     "KNN": KNeighborsClassifier(),
     "MLP": MLPClassifier(hidden_layer_sizes=(64,64), random_state=42),
-    "SVM": SVC(probability=True, random_state=42),
+    "SVM": SVC(probability=True, random_state=42, max_iter=100),
     "NB": MultinomialNB(),
     "DT": DecisionTreeClassifier(random_state=42),
     # Ensemble Methods (Bagging and Boosting)
-    "RF": RandomForestClassifier(random_state=42),
-    "GBDT": GradientBoostingClassifier(random_state=42),
-    "XGBoost": XGBClassifier(random_state=42, n_estimators=100, max_depth=3,),
-    "LightGBM": LGBMClassifier(random_state=42, n_estimators=100, max_depth=3,),
+    "RF": RandomForestClassifier(random_state=42, n_estimators=100, max_depth=100,),
+    "GBDT": GradientBoostingClassifier(random_state=42, n_estimators=100, max_depth=100,),
+    "XGBoost": XGBClassifier(random_state=42, n_estimators=100, max_depth=100,),
+    "LightGBM": LGBMClassifier(random_state=42, n_estimators=100, max_depth=100,),
 }
 
 # Train and evaluate each model

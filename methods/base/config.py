@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from peft import LoraConfig
+import torch
+
 
 question_template = """You are an expert in credit scoring.
 Your task is to analyze an applicant's historical financial and credit information and classify the applicant as either "Good" or "Bad".
@@ -17,7 +18,10 @@ Is this applicant's credit Good or Bad?
 answer_template = """The applicant's credit classification is:\n"""
 
 @dataclass
-class BaseConfig():
+class LanguageModelConfig():
+    """
+    This is the configuration class to store the common configurations in language model.
+    """
     model_name: str = field(
         default="Qwen/Qwen3-4B-Instruct-2507",
         metadata={"help": "The name of the model to be used for zero-shot evaluation."},
@@ -32,7 +36,10 @@ class BaseConfig():
     )
 
 @dataclass
-class CLSConfig(BaseConfig):
+class TrainingConfig():
+    """
+    This is the configuration class to store the common configurations in training.
+    """
     lr: float = field(
         default=2e-4,
         metadata={"help": "The learning rate for the optimizer."},
@@ -53,7 +60,15 @@ class CLSConfig(BaseConfig):
         default="constant",
         metadata={"help": "The learning rate scheduler to use."},
     )
-    lora_config: LoraConfig = field(
+    dtype: torch.dtype = field(
+        default=torch.bfloat16,
+        metadata={"help": "The data type of the linear layers."},
+    )
+
+
+@dataclass
+class LanguageModelTrainingConfig(LanguageModelConfig, TrainingConfig):
+    lora_config: int = field(
         default=None,
-        metadata={"help": "The configuration for LoRA fine-tuning."},
+        metadata={"help": "The configuration of LoRA adaptation."},
     )

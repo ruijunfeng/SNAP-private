@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from methods.base.config import BaseConfig
+from methods.base.config import LanguageModelConfig
 
 examples = """
 Here is a example of bad credit user profile:
@@ -54,9 +54,10 @@ Here is a example of good credit user profile:
 - The percentage of trades that currently carry a balance is 56%.
 """
 
+
 # https://www.sciencedirect.com/science/article/pii/S2666827024000100
 @dataclass
-class InformedGPTConfig(BaseConfig):
+class InformedGPTConfig(LanguageModelConfig):
     use_examples: bool = field(
         default=False,
         metadata={"help": "Whether to include examples in the prompt."},

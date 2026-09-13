@@ -1,6 +1,6 @@
 import os
 if "CUDA_VISIBLE_DEVICES" not in os.environ:
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 import torch
 from tqdm import trange
 from transformers import AutoTokenizer, AutoModelForCausalLM
@@ -8,11 +8,11 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from utils.json_utils import update_json
 
 from methods.informed_gpt.config import InformedGPTConfig
-from data_module import HelocDataModule
+from data_module import HELOCDataModule, PAKDDDataModule, HMEQDataModule, GMSCDataModule
 
 # prepare the data module
 config = InformedGPTConfig()
-data_module = HelocDataModule()
+data_module = PAKDDDataModule()
 dataset = data_module.get_profile_dataset(data_module.val_indices + data_module.test_indices)
 
 # create the output directory
