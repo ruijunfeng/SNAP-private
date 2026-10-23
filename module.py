@@ -68,7 +68,7 @@ class BaseClassificationModule(LightningModule):
         )
         
         # Logging (during evaluation, normally save by epoch rather than step)
-        self.log("total_loss_val", outputs["loss"], prog_bar=True, on_step=False, on_epoch=True, batch_size=1)
+        self.log("total_loss_val", outputs["loss"], prog_bar=True, on_step=False, on_epoch=True)
     
     def configure_optimizers(self):
         # Set the log directory for saving predictions
